@@ -16,90 +16,75 @@ import org.store.util.DateUtil;
 import com.google.gson.Gson;
 
 public class BookReaderImpl implements BookReader {
-	private static final Gson GSON = new Gson();
+    private static final Gson GSON = new Gson();
 
-	@Override
-	public List<Book> readCsv(String path) {
-		List<Book> books = new ArrayList<Book>();
+    @Override
+    public List<Book> readCsv(String path) {
+        List<Book> books = new ArrayList<>();
+        String line = "";
+        String cvsSplitBy = ",";
+        int idx = 0;
+        InputStream is = this.getClass().getClassLoader().getResourceAsStream(path);
 
-		BufferedReader br = null;
-		String line = "";
-		String cvsSplitBy = ",";
-		int idx = 0;
-		InputStream is = this.getClass().getClassLoader().getResourceAsStream(path);
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is))){
+            while ((line = br.readLine()) != null) {
+                idx ++;
+                if( idx == 1) {
+                    continue;
+                }
 
-		try {
+                String[] tokens = line.split(cvsSplitBy);
+                Book book = new Book();
+                book.setId(NumberUtils.toInt(tokens[0]));
+                book.setName(tokens[1]);
+                book.setPages(NumberUtils.toInt(tokens[2]));
+                book.setAuthor(tokens[3]);
+                book.setYear(tokens[4]);
+                if (book.getYear().isEmpty()) {
+                    book.setYear("N/A");
+                }
+                book.setPreview(tokens[5]);
+                book.setPublication(DateUtil.strToDate(tokens[6]));
+                books.add(book);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return books;
+    }
 
-			br = new BufferedReader(new InputStreamReader(is));
-			while ((line = br.readLine()) != null) {
-				idx ++;
-				if( idx == 1) {
-					continue;
-				}				
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<Book> readJson(String path) {
+        InputStream is = this.getClass().getClassLoader().getResourceAsStream(path);
+        final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 
-				String[] tokens = line.split(cvsSplitBy);
-				Book book = new Book();
-				book.setId(NumberUtils.toInt(tokens[0]));
-				book.setName(tokens[1]);
-				book.setPages(NumberUtils.toInt(tokens[2]));
-				book.setAuthor(tokens[3]);
-				book.setYear(tokens[4]);
-				if (book.getYear().isEmpty()) {
-					book.setYear("N/A");
-				}
-				book.setPreview(tokens[5]);
-				book.setPublication(DateUtil.strToDate(tokens[6]));
-				books.add(book);
-			}
+        List<?> items = GSON.fromJson(reader, List.class);
+        List<Book> books = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            Object item = items.get(i);
+            Map<String, String> data = (Map<String, String>) item;
+            Book book = new Book();
+            book.setId(NumberUtils.toInt(data.get("id")));
+            book.setName(data.get("name"));
+            book.setPages(NumberUtils.toInt(data.get("pages")));
+            book.setAuthor(data.get("author"));
+            if (data.containsKey("year")) {
+                book.setYear(data.get("year"));
+            } else {
+                book.setYear("N/A");
+            }
 
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (br != null) {
-				try {
-					br.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		return books;
-	}
+            book.setPreview(data.get("preview"));
+            book.setPublication(DateUtil.strToDate(data.get("publication")));
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<Book> readJson(String path) {
-		InputStream is = this.getClass().getClassLoader().getResourceAsStream(path);
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            books.add(book);
+        }
 
-		List<?> items = GSON.fromJson(reader, List.class);
-		List<Book> books = new ArrayList<>();
-		for (int i = 0; i < items.size(); i++) {
-			Object item = items.get(i);
-			Map<String, String> data = (Map<String, String>) item;
-			Book book = new Book();
-			book.setId(NumberUtils.toInt(data.get("id")));
-			book.setName(data.get("name"));
-			book.setPages(NumberUtils.toInt(data.get("pages")));
-			book.setAuthor(data.get("author"));
-			if (data.containsKey("year")) {
-				book.setYear(data.get("year"));
-			} else {
-				book.setYear("N/A");
-			}
+        return books;
+    }
 
-			book.setPreview(data.get("preview"));
-			book.setPublication(DateUtil.strToDate(data.get("publication")));
-
-			books.add(book);
-		}
-
-		return books;
-	}
-
-	public static void main(String[] args) {
-	}
+    public static void main(String[] args) {
+    }
 
 }
